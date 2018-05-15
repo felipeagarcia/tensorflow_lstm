@@ -9,10 +9,19 @@ Created on May 14 2018
 
 import tensorflow as tf
 import numpy as np
-import pickle
-hello = tf.constant('Hello, TensorFlow!')
+from sklearn.preprocessing import normalize
 
-# when you run sess, you should see a bunch of lines with the word gpu in them (if install worked)
-# otherwise, not running on gpu
-sess = tf.Session()
-print(sess.run(hello))
+#openning data file
+with open('../data/X_train.txt', 'r') as data:
+    #separating lines
+    content = data.readlines() 
+#removing whitespaces	
+content = [x.split() for x in content] 
+content = normalize(content, axis=1, norm='l1')
+
+#openning label file
+with open('../data/y_train.txt', 'r') as data:
+    #separating lines
+    labels = data.readlines() 
+#removing whitespaces	
+labels = [x.split() for x in labels] 

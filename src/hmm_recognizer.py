@@ -5,35 +5,27 @@ Created on May 19 2018
 @author: Felipe Aparecido Garcia
 @github: https://github.com/felipeagarcia/
 """
-
-from HmmClass import HmmScaled as hmm
+from hmmlearn import hmm
 import data_handler as data
-import cmath
-import pickle
+from sklearn.externals import joblib
+import numpy as np
 
-model_name = "model"
-n = 6
-m = 150
 num_classes = 6
 model = []
-
-# for i in range(num_classes):
-# 	with open(model_name + str(i), 'rb+') as file:
-# 		model.append(pickle.load(file))
-
-
-for i in range(num_classes):
-	model.append(hmm(model_name + str(i), n, m))
-
-for i in range(len(data.content)):
-	model[int(data.labels[i][0]) - 1].train(data.angles[i])
+scores = []
+for i in range(20):
+	model.append( hmm.GMMHMM(n_components = num_classes, verbose = False, n_iter = 1000, tol = 0.00001))
+	model[i].fit(data.content)
+	scores.append(model[i].score(data.test_content))
+arg_model = np.array(scores).argmin()
+_, predictions = model[arg_model].score_samples(data.test_content)
+print(predictions)
+predicted = [a.argmin() + 1 for a in predictions]
+print(predicted)
+print(data.test_labels)
 count = 0
-for i in range(len(data.test_content)):
-	probs = []
-	for j in range(num_classes):	
-		probs.append(model[j].computeProb(data.test_angles[i]))
-	recognized = probs.index(min(probs)) + 1
-	print("Expected: ", data.test_labels[i][0], " recognized: ", recognized)
-	if int(recognized) == int(data.test_labels[i][0]):
-		count = count + 1
-print("Accuracy: ", float(count)/ float(len(data.test_content)))
+for i in range(len(predicted)):
+	if(predicted[i] == int(data.test_labels[i][0])):
+		count += 1
+print('precision:', float(count)/len(predicted), 'count:', count, 'len:', len(predicted))
+joblib.dump(model[arg_model], "model.pkl")

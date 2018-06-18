@@ -8,7 +8,6 @@ Created on Fri May 26 18:02:31 2017
 import numpy
 import pickle
 import random
-import copy
 
 #To understand everything in this code, it's recomended to read 
 '''
@@ -16,13 +15,27 @@ Rabiner, Lawrence R. "A tutorial on hidden Markov models and selected applicatio
 Proceedings of the IEEE 77.2 (1989): 257-286.
     
 '''
-class HmmScaled():
+class hmm():
     "An implementation of hidden markov models based on Rabiner's book"
-    def __init__(self, model_name, n, m):
+    def __init__(self, model_name, n, m, A = None, B = None, pi = None):
         'Initialize the model'
-        A = {} #A is the trasition matrix
-        B = {} #B is the emission matrix
-        pi = [] #pi is the initial states distribution
+        if(A is None):
+            A = {} #A is the trasition matrix
+            self.A = self.initializeMatrix(A, n, n)
+        else:
+            self.A = A
+
+        if(B is None):
+            B = {} #B is the emission matrix
+            self.B = self.initializeMatrix(B, n, m)
+        else:
+            self.B = B
+
+        if(pi is None):
+            pi = [] #pi is the initial states distribution
+            self.pi = self.initializePi(pi, n)
+        else:
+            self.pi = pi
 
         #to create a model, we need to know some parameters:
         #n is the number os states
@@ -31,19 +44,12 @@ class HmmScaled():
         self.n = n
         self.m = m
 
-        #To initialize a model, we use random values to
-        #fill the matrix
-        self.A = self.initializeMatrix(A, n, n)
-        self.B = self.initializeMatrix(B, n, m)
-        self.pi = self.initializePi(pi, n)
-
         #The parameters above are part of the canonical problems
         self.alfa = {}
         self.beta = {}
         self.eta = {}
         self.gama = {}
         self.c = {}
-        print("Initalizing model")
         
     def initializeMatrix(self,Matrix, n, m):
         Matrix = numpy.zeros((n,m))
@@ -112,25 +118,25 @@ class HmmScaled():
         return pi
         
     def getName(self):
-        return copy.deepcopy(self.name)
+        return self.name
     
     def getA(self):
-        return copy.deepcopy(self.A)
+        return self.A.copy()
     
     def getB(self):
-        return copy.deepcopy(self.B)
+        return self.B.copy()
     
     def getPi(self):
-        return copy.deepcopy(self.pi)
+        return self.pi.copy()
     
     def setA(self, A):
-        self.A = copy.deepcopy(A)
+        self.A = A.copy()
         
     def setB(self, B):
-        self.B = copy.deepcopy(B)
+        self.B = B.copy()
         
     def setPi(self, pi):
-        self.pi = copy.deepcopy(pi)
+        self.pi = pi.copy()
     
     def normalize(self, Matrix, n, m):
         'make the sum of a row in a matrix be one'
@@ -157,14 +163,14 @@ class HmmScaled():
         
     def foward_scaled(self, O, t):
         'the foward algorithm'
-        c= []
+        c = []
         alfa = []
 
         #####
-        A = getattr(self, 'A')
-        B = getattr(self, 'B')
+        A = self.getA()
+        B = self.getB()
         n = getattr(self, 'n')
-        pi = getattr(self, 'pi')
+        pi = self.getPi()
         
         for i in range(t):
             c.append(0)
@@ -204,8 +210,8 @@ class HmmScaled():
     def backward_scaled(self, O, t):
         'The backward algorithm'
         n = getattr(self, 'n')
-        A = getattr(self, 'A')
-        B = getattr(self, 'B')
+        A = self.getA()
+        B = self.getB()
         c = getattr(self, 'c')
         beta = numpy.zeros(( t, n))
         
@@ -219,7 +225,7 @@ class HmmScaled():
                 beta[i][j] = c[i] * beta[i][j]
         return beta
     
-    def computeProb(self, O):
+    def compute_prob(self, O):
         'compute the log_10 of P(O|model)'
         t = len(O)
         self.alfa, self.c = self.foward_scaled(O,t)
@@ -228,8 +234,8 @@ class HmmScaled():
     
     def compute_eta_gama(self, O, t):
         'computing eta and gama wich we will use to reestimate parameters'
-        A = getattr(self, 'A')
-        B = getattr(self, 'B')
+        A = self.getA()
+        B = self.getB()
         n = getattr(self, 'n')
         alfa = getattr(self, 'alfa')
         beta = getattr(self, 'beta')
@@ -261,7 +267,7 @@ class HmmScaled():
     
     def computeA(self, t, min_val):
         'reestimates A'
-        A = getattr(self, 'A')
+        A = self.getA()
         n = getattr(self, 'n')
         eta = getattr(self, 'eta')
         gama = getattr(self, 'gama')
@@ -284,7 +290,7 @@ class HmmScaled():
     
     def computeB(self, O, t, min_val):
         'reestimates B'
-        B = getattr(self, 'B')
+        B = self.getB()
         n = getattr(self, 'n')
         m = getattr(self, 'm')
         gama = getattr(self, 'gama')
@@ -309,7 +315,7 @@ class HmmScaled():
     def computePi(self, min_val):
         'reestimates pi'
         n = getattr(self, 'n')
-        pi = getattr(self, 'pi')
+        pi = self.getPi()
         gama = getattr(self, 'gama')
         for i in range(0,n):
            pi[i] = (gama[0][i])
@@ -321,16 +327,16 @@ class HmmScaled():
     def train(self, O):
         'the Baum-Welch algorithm'
         #@arg O: observations
-        min_val = 0.00001
+        min_val = 0.0000000001
         count = 0
-        max_count = 100 #number of iterations
+        max_count = 1000 #number of iterations
         tempA = {}
         tempB = {}
         tempPi = {}
         t = len(O)
         while  count < max_count:
             self.alfa, self.c = self.foward_scaled(O,t)
-            old_prob = self.computeProb(O)
+            old_prob = self.compute_prob(O)
             #print("log(P(O/lambda)) = " + str(old_prob))
             self.beta = self.backward_scaled(O, t)
 
@@ -341,25 +347,25 @@ class HmmScaled():
             tempB = self.computeB( O, t, min_val)
 
             #now we need to guarantee that the models has improved, otherwise, we discard the changes
-            auxA = getattr(self,'A')
-            auxB = getattr(self,'B')
-            auxPi = getattr(self,'pi')
+            auxA = self.getA()
+            auxB = self.getB()
+            auxPi = self.getPi()
 
-            setattr(self, 'A', copy.deepcopy(tempA))
-            setattr(self, 'B', copy.deepcopy(tempB))
-            setattr(self, 'pi', copy.deepcopy(tempPi))
-            totalProb = self.computeProb(O)
-            print("log(P(O/lambda)) = ", totalProb)
+            self.setA(tempA)
+            self.setB(tempB)
+            self.setPi(tempPi)
+
+            totalProb = self.compute_prob(O)
+            print("log(P(O|lambda):", totalProb, self.name, count)
             if(old_prob > totalProb):
                 #the model has improved, we keep the changes
                 count = count + 1
             else:
                 #the model didn't improved, now we discard the reestimated parameters and stop the reestimation process
-                setattr(self, 'A', copy.deepcopy(auxA))
-                setattr(self, 'B', copy.deepcopy(auxB))
-                setattr(self, 'pi', copy.deepcopy(auxPi))
+                self.setA(auxA)
+                self.setB(auxB)
+                self.setPi(auxPi)
                 break
-        #print(self.name)
         #serializing the model to a file
         with open(self.name, 'wb+') as fp:
             pickle.dump(self, fp)

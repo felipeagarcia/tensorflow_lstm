@@ -5,27 +5,40 @@ Created on May 19 2018
 @author: Felipe Aparecido Garcia
 @github: https://github.com/felipeagarcia/
 """
-from hmmlearn import hmm
+from HmmClass import hmm
 import data_handler as data
-from sklearn.externals import joblib
 import numpy as np
+import pickle
 
 num_classes = 6
+n = 6
+m = 180
 model = []
-scores = []
-for i in range(20):
-	model.append( hmm.GMMHMM(n_components = num_classes, verbose = False, n_iter = 1000, tol = 0.00001))
-	model[i].fit(data.content)
-	scores.append(model[i].score(data.test_content))
-arg_model = np.array(scores).argmin()
-_, predictions = model[arg_model].score_samples(data.test_content)
-print(predictions)
-predicted = [a.argmin() + 1 for a in predictions]
-print(predicted)
-print(data.test_labels)
+m_data = []
+for i in range(num_classes):
+	with open('a' + str(i), 'rb') as file:
+		model.append(pickle.load(file))
+	m_data.append([])
+for i in range(len(data.content)):
+	# model[int(data.labels[i][0]) - 1].train(data.content[i])
+	# print('***********')
+	if (len(m_data[ int(data.labels[i][0]) - 1 ]) == 0):
+		m_data[ int(data.labels[i][0]) - 1 ] = (data.content[i])
+	else:
+		m_data[ int(data.labels[i][0]) - 1 ] = np.concatenate(
+			[m_data[ int(data.labels[i][0]) - 1 ], (data.content[i])] )
+
+print(m_data)
+for i in range(6):
+	model[i].train(m_data[i])
+
 count = 0
-for i in range(len(predicted)):
-	if(predicted[i] == int(data.test_labels[i][0])):
+for i in range(len(data.test_content)):
+	probs = []
+	for j in range(6):
+		probs.append( model[j].compute_prob(data.test_content[i]))
+	predicted = np.array(probs).argmin() + 1
+	print('expected:', int(data.test_labels[i][0]), 'predicted:', predicted)
+	if(predicted == int(data.test_labels[i][0])):
 		count += 1
-print('precision:', float(count)/len(predicted), 'count:', count, 'len:', len(predicted))
-joblib.dump(model[arg_model], "model.pkl")
+print("precision:", float(count)/len(data.test_content), "count:", count, "len:", len(data.test_content))

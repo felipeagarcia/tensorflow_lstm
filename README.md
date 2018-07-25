@@ -1,8 +1,9 @@
-This project implements a algorithm that use RNN-LSTM to recognize activities from the public datasets SBHAR and PAMAP2 using tensorflow.
+##This project implements a algorithm that use RNN-LSTM to recognize activities from the public datasets SBHAR and PAMAP2 using tensorflow.
 
 *******************************************
 
 src/ contains the source files
+
 data/ contains the datasets
 
 *******************************************

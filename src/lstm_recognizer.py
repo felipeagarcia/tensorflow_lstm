@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.contrib import rnn
 import data_handler_lstm as data
+import numpy as np
 
 hm_epochs = 100
 n_classes = 6
@@ -13,10 +14,7 @@ max_len = 47
 inputs, labels = data.prepare_data(data.content, data.labels, max_len)
 test_inputs, test_labels = data.prepare_data(data.test_content,
                                              data.test_labels, max_len)
-dataset = tf.data.Dataset.from_tensor_slices(inputs)
-dataset = dataset.batch(batch_size)
-inputs = dataset
-
+data = None
 x = tf.placeholder(tf.float32, [None, n_chunks, chunk_size])
 y = tf.placeholder(tf.float32)
 
@@ -45,25 +43,27 @@ def train_neural_network(x):
             )
     optimizer = tf.train.AdamOptimizer().minimize(cost)
     with tf.Session() as sess:
-        sess.run(tf.initialize_all_variables())
-
+        sess.run(tf.global_variables_initializer())
         for epoch in range(hm_epochs):
             epoch_loss = 0
-            for i in range(int(len(inputs)/batch_size)):
-                epoch_x = inputs[i]
-                epoch_y = labels[i]
+            i = 0
+            while i < 140:
+                epoch_x = np.array(inputs[i:i+batch_size])
+                epoch_y = np.array(labels[i:i+batch_size])
+                print(i, len(inputs))
                 _, c = sess.run([optimizer, cost],
                                 feed_dict={x: epoch_x, y: epoch_y})
                 epoch_loss += c
-
+                i += batch_size
             print('Epoch', epoch, 'completed out of',
                   hm_epochs, 'loss:', epoch_loss)
 
         correct = tf.equal(tf.argmax(prediction, 1), tf.argmax(y, 1))
-
+        print(np.array(x).shape)
+        print(np.array(test_inputs).shape)
         accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
-        print('Accuracy:', accuracy.eval({x: test_inputs.reshape(
-                    (-1, n_chunks, chunk_size)), y: test_labels}))
+        print('Accuracy:', accuracy.eval({x: np.array(test_inputs),
+              y: np.array(test_labels)}))
 
 
 train_neural_network(x)
